@@ -4,7 +4,7 @@ CFLAGS += -O2
 all: c_kzg_4844.o lib
 
 c_kzg_4844.o: c_kzg_4844.c Makefile
-	clang -Wall -I$(INCLUDE_DIRS) $(CFLAGS) -c $<
+	clang -DCKZG_USE_PTHREAD -Wall -I$(INCLUDE_DIRS) $(CFLAGS) -c $<
 
 # Will fail with "patch does not apply" if it has already been patched.
 # Safe to ignore.

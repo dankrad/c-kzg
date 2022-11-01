@@ -12,4 +12,4 @@ ecc_test: py_ecc_tests.py ckzg.so
 	python $<
 
 ckzg.so: ckzg.c ../../src/c_kzg_4844.o ../../lib/libblst.a
-	clang -O -Wall -shared -fPIC -Wl,-Bsymbolic -I${INCLUDE_PY} ${addprefix -I,${INCLUDE_DIRS}} -o $@ $^
+	clang -O -lpthread -Wall -shared -fPIC -Wl,-Bsymbolic -I${INCLUDE_PY} ${addprefix -I,${INCLUDE_DIRS}} -o $@ $^

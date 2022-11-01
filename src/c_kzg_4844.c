@@ -906,9 +906,109 @@ static void g1_lincomb(g1_t *out, const g1_t *p, const fr_t *coeffs, const uint6
     }
 }
 
+#ifdef CKZG_USE_PTHREAD
+
+#include <pthread.h>
+#include <assert.h>
+#define _GNU_SOURCE
+#include <sys/sysinfo.h>
+
+static int get_num_procs() {
+#if defined(PTW32_VERSION) || defined(__hpux)
+    printf("case 0\n");
+    return pthread_num_processors_np();
+#elif defined(__APPLE__) || defined(__FreeBSD__)
+    printf("case 1\n");
+    int count;
+    size_t size=sizeof(count);
+    return sysctlbyname("hw.ncpu",&count,&size,NULL,0)?0:count;
+#elif defined(BOOST_HAS_UNISTD_H) && defined(_SC_NPROCESSORS_ONLN)
+    printf("case 2\n");
+    int const count=sysconf(_SC_NPROCESSORS_ONLN);
+    return (count>0)?count:0;
+#elif defined(_GNU_SOURCE)
+    printf("case 3\n");
+    return get_nprocs();
+#else
+    printf("case 4\n");
+    return 0;
+#endif
+}
+
+typedef struct{
+  const g1_t* g1s;
+  const BLSFieldElement* frs;
+  uint64_t n;
+  g1_t* out;
+} thread_data;
+
+static void* thread_function(void* arg) {
+  thread_data *d = (thread_data*) arg;
+  printf("running thread\n");
+  g1_lincomb(d->out, d->g1s, d->frs, d->n);
+  printf("finished thread\n");
+  return NULL;
+}
+
+void poly_to_kzg_commitment(KZGCommitment *out, const Polynomial p, const KZGSettings *s) {
+  int i, n = get_num_procs();
+
+  printf("get_num_procs = %d\n", n);
+
+  if (n > 8) n = 8;
+  if (n == 0) n = 1;
+
+  printf("Using %d threads\n", n);
+
+  pthread_t* threads = calloc(n, sizeof(pthread_t));
+  assert(threads != NULL);
+
+  thread_data* datas = calloc(n, sizeof(thread_data));
+  if (datas == NULL) { free(threads); assert(false); }
+
+  int n_per_thread = (FIELD_ELEMENTS_PER_BLOB + n - 1) / n;
+
+  printf("n_per_thread: %d\n", n_per_thread);
+
+  for (i = 0; i < n; i++) {
+    datas[i].g1s = &s->g1_values[i * n_per_thread];
+    datas[i].frs = &p[i * n_per_thread];
+    if (i + 1 == n)
+      datas[i].n = FIELD_ELEMENTS_PER_BLOB - (i * n_per_thread);
+    else
+      datas[i].n = n_per_thread;
+    if (pthread_create(&threads[i], NULL, &thread_function, &datas[i]) != 0) {
+      free(threads); free(datas); assert(false);
+    }
+  }
+
+  printf("created threads\n");
+
+  for (i = 0; i < n; i++) {
+    printf("waiting for %d\n", i);
+    if (pthread_join(threads[i], NULL) != 0) {
+      free(threads); free(datas); assert(false);
+    }
+  }
+
+  printf("joined threads\n");
+
+  free(threads);
+
+  *out = g1_identity;
+  for (i = 0; i < n; i++)
+    g1_add_or_dbl(out, out, datas[i].out);
+
+  free(datas);
+}
+
+#else
+
 static void poly_to_kzg_commitment(KZGCommitment *out, const Polynomial p, const KZGSettings *s) {
   g1_lincomb(out, s->g1_values, p, FIELD_ELEMENTS_PER_BLOB);
 }
+
+#endif
 
 static void poly_from_blob(Polynomial p, const Blob blob) {
   for (size_t i = 0; i < FIELD_ELEMENTS_PER_BLOB; i++)

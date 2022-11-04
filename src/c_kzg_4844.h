@@ -48,7 +48,7 @@ typedef blst_fr fr_t;         /**< Internal Fr field element type */
 typedef g1_t KZGCommitment;
 typedef g1_t KZGProof;
 typedef fr_t BLSFieldElement;
-typedef uint8_t Blob[BYTES_PER_BLOB];
+typedef struct { uint8_t b[BYTES_PER_BLOB]; } Blob;
 
 /**
  * The common return type for all routines in which something can go wrong.
@@ -111,7 +111,7 @@ C_KZG_RET verify_aggregate_kzg_proof(bool *out,
     const KZGSettings *s);
 
 void blob_to_kzg_commitment(KZGCommitment *out,
-    const Blob blob,
+    const Blob *blob,
     const KZGSettings *s);
 
 C_KZG_RET verify_kzg_proof(bool *out,

@@ -910,12 +910,12 @@ static void poly_to_kzg_commitment(KZGCommitment *out, const Polynomial p, const
   g1_lincomb(out, s->g1_values, p, FIELD_ELEMENTS_PER_BLOB);
 }
 
-static void poly_from_blob(Polynomial p, const Blob blob) {
+static void poly_from_blob(Polynomial p, const Blob *blob) {
   for (size_t i = 0; i < FIELD_ELEMENTS_PER_BLOB; i++)
-    bytes_to_bls_field(&p[i], &blob[i * BYTES_PER_FIELD_ELEMENT]);
+    bytes_to_bls_field(&p[i], &blob->b[i * BYTES_PER_FIELD_ELEMENT]);
 }
 
-void blob_to_kzg_commitment(KZGCommitment *out, const Blob blob, const KZGSettings *s) {
+void blob_to_kzg_commitment(KZGCommitment *out, const Blob *blob, const KZGSettings *s) {
   Polynomial p;
   poly_from_blob(p, blob);
   poly_to_kzg_commitment(out, p, s);
@@ -1142,7 +1142,7 @@ C_KZG_RET compute_aggregate_kzg_proof(KZGProof *out,
   if (polys == NULL) { free(commitments); return C_KZG_MALLOC; }
 
   for (size_t i = 0; i < n; i++) {
-    poly_from_blob(polys[i], blobs[i]);
+    poly_from_blob(polys[i], &blobs[i]);
     poly_to_kzg_commitment(&commitments[i], polys[i], s);
   }
 
@@ -1167,7 +1167,7 @@ C_KZG_RET verify_aggregate_kzg_proof(bool *out,
   Polynomial* polys = calloc(n, sizeof(Polynomial));
   if (polys == NULL) return C_KZG_MALLOC;
   for (size_t i = 0; i < n; i++)
-    poly_from_blob(polys[i], blobs[i]);
+    poly_from_blob(polys[i], &blobs[i]);
 
   Polynomial aggregated_poly;
   KZGCommitment aggregated_poly_commitment;

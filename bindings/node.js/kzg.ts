@@ -57,7 +57,7 @@ function requireSetupHandle(): SetupHandle {
   return setupHandle;
 }
 
-export function loadTrustedSetup(filePath: string): void {
+export function loadTrustedSetup(filePath: string): SetupHandle {
   if (setupHandle) {
     throw new Error(
       "Call freeTrustedSetup before loading a new trusted setup.",
@@ -71,11 +71,11 @@ export function freeTrustedSetup(): void {
   setupHandle = undefined;
 }
 
-export function blobToKzgCommitment(blob: Blob): KZGCommitment {
+export function blobToKzgCommitment(blob: Blob, setupHandle: SetupHandle): KZGCommitment {
   return kzg.blobToKzgCommitment(blob, requireSetupHandle());
 }
 
-export function computeAggregateKzgProof(blobs: Blob[]): KZGProof {
+export function computeAggregateKzgProof(blobs: Blob[], setupHandle: SetupHandle): KZGProof {
   return kzg.computeAggregateKzgProof(blobs, requireSetupHandle());
 }
 
@@ -83,6 +83,7 @@ export function verifyAggregateKzgProof(
   blobs: Blob[],
   expectedKzgCommitments: KZGCommitment[],
   kzgAggregatedProof: KZGProof,
+  setupHandle: SetupHandle
 ): boolean {
   return kzg.verifyAggregateKzgProof(
     blobs,

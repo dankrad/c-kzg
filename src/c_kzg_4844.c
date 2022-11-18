@@ -1119,8 +1119,11 @@ static C_KZG_RET compute_aggregated_poly_and_commitment(Polynomial poly_out, KZG
 
   if (n == 1) {
     bytes_to_bls_field(chal_out, hash);
-    poly_lincomb(poly_out, polys, chal_out, n);
-    g1_lincomb(comm_out, kzg_commitments, chal_out, n);
+    // When n == 1, the aggregated polynomial/commitment is 
+    // the result of taking the first polynomial/commitment
+    // from the vector
+    memcpy(poly_out, polys[0], FIELD_ELEMENTS_PER_BLOB * 32);
+    memcpy(comm_out, &kzg_commitments[0], 48);
     free(hash);
     return C_KZG_OK;
   }
